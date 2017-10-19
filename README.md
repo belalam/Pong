@@ -1,2 +1,2 @@
 # Pong
-Intro into game dev using Python to create pong
+Intro into game development using Python to create pong
