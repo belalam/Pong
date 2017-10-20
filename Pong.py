@@ -1,133 +1,62 @@
 import pygame
 from pygame.locals import *
+import Objects
 
+running=True
+pygame.init()
 
-class Pong(object):
-    def __init__(self, screensize):
+def main(running):
 
-        self.screensize = screensize
-        self.centerx = int(screensize[0] * 0.5)
-        self.centery = int(screensize[1] * 0.5)
-        self.radius = 10
-        self.rect = pygame.Rect(self.centerx - self.radius,
-                                self.centery - self.radius,
-                                self.radius * 2, self.radius * 2)
-        self.colour = (255, 255, 255)
-        self.direction = [-1, 1]
-        self.speedx = 2
-        self.speedy = 5
-
-        self.hit_edge_left = False
-        self.hit_edge_right = False
-
-    def update(self, player_paddle=None, ai_paddle=None):
-
-        self.centerx += self.direction[0] * self.speedx
-        self.centery += self.direction[1] * self.speedy
-
-        self.rect.center = (self.centerx, self.centery)
-
-        if self.rect.top <= 0:
-            self.direction[1] = 1
-        elif self.rect.bottom >= self.screensize[1] - 1:
-            self.direction[1] = -1
-
-        if self.rect.right >= self.screensize[0] - 1:
-            self.hit_edge_right = True
-        elif self.rect.left <= 0:
-            self.hit_edge_left = True
-
-        if self.rect.colliderect(player_paddle.rect):
-            self.direction[0] = -1
-        if self.rect.colliderect(ai_paddle.rect):
-            self.direction[0] = 1
-
-    def render(self, screen):
-        pygame.draw.circle(screen, self.colour, self.rect.center, self.radius, 0)
-
-
-class AIPaddle(object):
-    def __init__(self, screensize):
-
-        self.screen_size = screensize
-        self.centerx = 5
-        self.centery = int(screensize[1] * 0.5)
-
-        self.height = 100
-        self.width = 10
-        self.color = (255, 100, 100)
-
-        self.rect = pygame.Rect(0, self.centery - int(self.height * 0.5), self.width, self.height)
-
-        self.speed = 5
-
-    def update(self, pong):
-
-        if pong.rect.top < self.rect.top:
-            self.centery -= self.speed
-        elif pong.rect.bottom > self.rect.bottom:
-            self.centery += self.speed
-
-        self.rect.center = (self.centerx, self.centery)
-
-    def render(self, screen):
-        pygame.draw.rect(screen, self.color, self.rect, 0)
-
-
-class PlayerPaddle(object):
-    def __init__(self, screensize):
-
-        self.screensize = screensize
-        self.centerx = screensize[0] - 5
-        self.centery = int(screensize[1] * 0.5)
-
-        self.height = 100
-        self.width = 10
-        self.color = (100, 255, 100)
-
-        self.rect = pygame.Rect(0, self.centery - int(self.height * 0.5), self.width, self.height)
-
-        self.speed = 4
-        self.direction = 0
-
-    def update(self):
-        self.centery += self.direction * self.speed
-
-        if self.centery < int(self.height * 0.5):
-            self.centery = int(self.height * 0.5)
-        if self.centery > (self.screensize[1] - 1) - int(self.height * 0.5):
-            self.centery = (self.screensize[1] - 1) - int(self.height * 0.5)
-
-        self.rect.center = (self.centerx, self.centery)
-
-    def render(self, screen):
-        pygame.draw.rect(screen, self.color, self.rect, 0)
-
-
-def main():
-    pygame.init()
-
-    screensize = (640, 480)
+    screensize = (640,480)
 
     screen = pygame.display.set_mode(screensize)
 
     clock = pygame.time.Clock()
 
-    pong = Pong(screensize)
-    player_paddle = PlayerPaddle(screensize)
-    ai_paddle = AIPaddle(screensize)
+    #initialize objects
+    start_button = Objects.Button(screensize, "START", 1)
+    again_button = Objects.Button(screensize, "Go Again?", 1)
+    exit_button = Objects.Button(screensize, "QUIT", 2)
+    pong = Objects.Pong(screensize)
+    player_paddle = Objects.PlayerPaddle(screensize)
+    ai_paddle = Objects.AIPaddle(screensize)
 
-    running = True
 
-    while running:
+    #set states
+    menu=True
+    play=False
 
-        # limit fps
+    while menu:
         clock.tick(64)
+        start_button.render(screen)
+        exit_button.render(screen)
+        pygame.display.flip()
+        mouse = pygame.mouse.get_pos()
+        mouse_click = pygame.mouse.get_pressed()
 
+        # event handling phase
+        if start_button.rect.collidepoint(mouse) and mouse_click[0] == True:
+            menu = False
+            play = True
+
+        if exit_button.rect.collidepoint(mouse) and mouse_click[0] == True:
+            menu = False
+            running = False
+
+        for event in pygame.event.get():
+            if event.type == QUIT:
+                menu=False
+                running = False
+
+    while play:
+
+        clock.tick(64)
         # event handling phase
         for event in pygame.event.get():
             if event.type == QUIT:
+                play = False
                 running = False
+                pygame.quit()
         if event.type == KEYDOWN:
             if event.key == K_UP:
                 player_paddle.direction = -1
@@ -139,27 +68,50 @@ def main():
             elif event.key == K_DOWN and player_paddle.direction == 1:
                 player_paddle.direction = 0
 
-        # object update phase
+
+        #object update phase
         ai_paddle.update(pong)
         player_paddle.update()
         pong.update(player_paddle, ai_paddle)
 
+
+
         if pong.hit_edge_left:
-            print 'You Won!'
-            running = False
+
+            myfont = pygame.font.Font('freesansbold.ttf', 30)
+            textsurface = myfont.render('You Won!', True, [255, 255, 255])
+            text_pin = (int(screensize[0] / 2) - int(myfont.size('You Win!')[0] / 2), 150)
+            screen.blit(textsurface, text_pin)
+            pygame.display.flip()
+            pygame.time.delay(4000)
+            play = False
+
+
+
+
+
 
         elif pong.hit_edge_right:
-            print 'You Lose!'
-            running = False
 
-        # rendering phase
+            myfont = pygame.font.Font('freesansbold.ttf', 30)
+            textsurface = myfont.render('You Lose!', True, [255, 255, 255])
+            text_pin = (int(screensize[0]/2) - int(myfont.size('You Lose!')[0] / 2), 150)
+            screen.blit(textsurface, text_pin)
+            pygame.display.flip()
+            pygame.time.delay(4000)
+            play = False
+
+
+        #rendering phase
         screen.fill((0, 0, 0))
         ai_paddle.render(screen)
         player_paddle.render(screen)
         pong.render(screen)
         pygame.display.flip()
 
-    pygame.quit()
+    return running
 
-
-main()
+while running:
+    running=main(running)
+    if running == False:
+        pygame.quit()
